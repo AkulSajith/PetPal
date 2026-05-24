@@ -1,0 +1,10 @@
+{
+  "name": "PetPal – Your Pet’s Digital Companion",
+  "description": "PetPal is a community-driven pet care platform built to simplify and enrich every pet owner’s life. It connects loving pet owners with trusted local caregivers and offers a one-stop solution for all pet needs — from temporary hosting and customized food plans to trainers, walkers, vet locators, and community events.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PetPal India – Your Pet’s Digital Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-orange': {
+                '50': '#fff7ed',
+                '100': '#ffedd5',
+                '200': '#fed7aa',
+                '300': '#fdba74',
+                '400': '#fb923c',
+                '500': '#f97316',
+                '600': '#ea580c',
+              },
+              'brand-teal': {
+                '50': '#f0fdfa',
+                '100': '#ccfbf1',
+                '200': '#99f6e4',
+                '300': '#5eead4',
+                '400': '#2dd4bf',
+                '500': '#14b8a6',
+                '600': '#0d9488',
+                '700': '#0f766e',
+                '800': '#115e59'
+              },
+            },
+            fontFamily: {
+              sans: ['Poppins', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- IMPORTANT: Replace YOUR_GOOGLE_MAPS_API_KEY with your actual Google Maps API key -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-brand-orange-50">
+    <div id="root"></div>
+    <script>
+      // Seed initial data for demonstration if it doesn't exist
+      if (!localStorage.getItem('petpalUsers')) {
+        const initialUsers = [
+          {
+            "name": "Akul Sajith",
+            "email": "akul@example.com",
+            "password": "12345",
+            "city": "Bengaluru",
+            "petType": "Dog"
+          }
+        ];
+        localStorage.setItem('petpalUsers', JSON.stringify(initialUsers));
+      }
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
