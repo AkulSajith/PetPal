@@ -10,8 +10,6 @@ A modern full-stack pet care ecosystem combining pet services, analytics, busine
 
 <hr>
 
-# 📌 Repository Description
-
 PetPal is a scalable full-stack pet care platform that connects pet owners with nearby caretakers, trainers, walkers, veterinarians, adoption centers, and local pet communities while integrating analytics dashboards, forecasting systems, and ML-ready recommendation architecture.
 
 The platform combines:
