@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import type { Page, User } from './types';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ChatbotWidget from './components/chat/ChatbotWidget';
 import HomePage from './pages/HomePage';
 import ServicesPage from './pages/ServicesPage';
 import HowItWorksPage from './pages/HowItWorksPage';
@@ -19,7 +20,6 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
-import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
 import { initDatabase } from './lib/db';
 
 const App: React.FC = () => {
@@ -115,8 +115,6 @@ const App: React.FC = () => {
         return loggedInUser ? <DashboardPage user={loggedInUser} navigate={navigate} /> : <LoginPage navigate={navigate} onLogin={handleLogin} />;
       case 'profile':
         return loggedInUser ? <ProfilePage user={loggedInUser} onUpdateUser={handleUserUpdate} /> : <LoginPage navigate={navigate} onLogin={handleLogin} />;
-      case 'admin-analytics':
-         return <AdminAnalyticsPage />;
       default:
         return <HomePage navigate={navigate} />;
     }
@@ -129,6 +127,7 @@ const App: React.FC = () => {
         {renderPage()}
       </main>
       <Footer />
+      {currentPage !== 'login' && currentPage !== 'signup' && <ChatbotWidget />}
     </div>
   );
 };

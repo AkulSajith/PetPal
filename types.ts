@@ -1,7 +1,7 @@
 // Fix: Import React to make its types available for use in this file.
 import React from 'react';
 
-export type Page = 'home' | 'services' | 'how-it-works' | 'community' | 'about' | 'contact' | 'hosting' | 'food' | 'training' | 'vets' | 'events' | 'playdates' | 'adoption' | 'login' | 'signup' | 'dashboard' | 'profile' | 'admin-analytics';
+export type Page = 'home' | 'services' | 'how-it-works' | 'community' | 'about' | 'contact' | 'hosting' | 'food' | 'training' | 'vets' | 'events' | 'playdates' | 'adoption' | 'login' | 'signup' | 'dashboard' | 'profile';
 
 export interface User {
   name: string;

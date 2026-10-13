@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "test": "npm run test:chat",
+    "test:chat": "node --test test/chatRateLimit.test.js test/chatValidation.test.js test/frontendCitations.test.js test/ollamaService.test.js test/petCareChat.test.js test/petCareRetrieval.test.js test/petCareSafety.test.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js"
@@ -24,5 +26,8 @@
   "devDependencies": {
     "nodemon": "^3.1.4",
     "prisma": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

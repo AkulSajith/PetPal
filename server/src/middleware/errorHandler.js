@@ -6,6 +6,14 @@ export function notFoundHandler(req, _res, next) {
 }
 
 export function errorHandler(error, _req, res, _next) {
+  if (error.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: { message: 'Malformed JSON request body' } });
+  }
+
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({ error: { message: 'Request body is too large' } });
+  }
+
   if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
     return res.status(401).json({ error: { message: 'Session expired. Please log in again.' } });
   }

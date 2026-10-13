@@ -43,7 +43,6 @@ const Header: React.FC<HeaderProps> = ({ currentPage, navigate, loggedInUser, on
   const authNavItems: { page: Page; label: string }[] = [
     { page: 'dashboard', label: 'Dashboard' },
     { page: 'profile', label: 'Profile' },
-    { page: 'admin-analytics', label: 'Data Workspace 📊' },
   ];
   
   const serviceSubPages: Page[] = ['hosting', 'food', 'training', 'vets', 'events', 'playdates', 'adoption'];
