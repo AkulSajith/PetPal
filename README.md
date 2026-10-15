@@ -1,34 +1,35 @@
 # PetPal
 
-PetPal is a full-stack pet-care project built with React, TypeScript, Vite, Node.js, Express, Prisma, and PostgreSQL. It combines an interactive customer-facing pet-services experience with an AI pet-care assistant that uses Ollama Cloud and a curated retrieval-augmented generation (RAG) pipeline.
+PetPal is an AI-assisted pet-care platform built with React, TypeScript, Vite, Node.js, Express, Prisma, and PostgreSQL. It combines an interactive customer-facing pet-services experience with an informational AI assistant powered by Ollama Cloud and a curated retrieval-augmented generation (RAG) pipeline.
 
-The project is designed to help pet owners explore care services and obtain cautious, general pet-care guidance. It is a portfolio and development project—not a deployed veterinary service or a substitute for professional veterinary care.
+The frontend is publicly available as a static demonstration on AWS EC2 at [http://3.107.54.95](http://3.107.54.95). The Express API, PostgreSQL database, and server-side chatbot endpoint are **not deployed on that EC2 instance**, so the public site is not a complete production deployment. PetPal remains a portfolio and development project—not a veterinary service or a substitute for professional veterinary care.
 
 Repository: [github.com/AkulSajith/PetPal](https://github.com/AkulSajith/PetPal)
 
 ## Current implementation status
 
-PetPal currently contains two distinct application layers:
+PetPal currently contains two application layers plus a frontend-only public deployment:
 
 - The React customer experience implements navigable service pages and interactive demo workflows. Most customer data, login state, bookings, subscriptions, and recommendations are simulated in browser `localStorage`.
 - The Express backend contains REST routes, JWT middleware, Prisma models, and a PostgreSQL migration. With the exception of the AI chat endpoint, the current React pages are not yet connected to these database-backed APIs end to end.
+- The Vite production build is deployed manually to an Amazon Linux 2023 EC2 instance and served as static files by Nginx. This deployment contains the frontend only.
 
 This distinction is important: a working frontend workflow should not be interpreted as a production booking, payment, identity, provider, or medical system.
 
 ## Features
 
-| Area | Current state |
-| --- | --- |
-| Customer UI and navigation | Responsive React pages for home, services, how it works, community, about, contact, authentication, dashboard, and profile views. |
-| Accounts and profiles | Frontend demo signup, login, owner profile, and pet-profile workflows stored in `localStorage`. Separate backend authentication and pet APIs exist but are not wired into these pages. |
-| Dashboard | Customer dashboard for locally simulated pets, bookings, food orders, reviews, and recommendations. |
-| Boarding and temporary hosting | Search, compatibility scoring, date selection, and local booking simulation. It does not contact a real host or payment service. |
-| Training and walking | Trainer/walker discovery and local scheduling simulation. |
-| Veterinary discovery | Local clinic listings and appointment simulation. It does not provide real-time veterinary access. |
-| Food subscriptions | Local pet-food recommendation and subscription workflow. No fulfillment or payment integration is implemented. |
-| Community and events | Community feed and event browsing; event registration is stored locally. |
-| Adoption and playdates | Static/demo listings and client-side browsing interactions. |
-| PetPal AI | React chat widget connected to an Express API, Ollama Cloud, server-side pet-care safeguards, local BM25 retrieval, and clickable source citations. |
+| Feature | Purpose | Implementation status |
+| --- | --- | --- |
+| Customer UI and navigation | Browse PetPal pages and service categories on desktop or mobile. | Implemented as a responsive React SPA and included in the EC2 frontend deployment. |
+| Accounts, profiles, and dashboard | Demonstrate owner sign-up, login, pet profiles, bookings, food orders, reviews, and recommendations. | Browser-local demonstration using `localStorage`; it is not production authentication or database-backed persistence. |
+| Pet hosting and boarding | Search caregivers, compare compatibility, select dates, and create a booking. | Interactive local simulation; no real host notification or payment service. |
+| Training and walking | Discover trainers or walkers and schedule a service. | Interactive local simulation using seeded data. |
+| Veterinary clinic finder | Browse clinic details, filter providers by city, and demonstrate appointment booking. | Uses seeded browser-local provider data and simulated appointments. `index.html` contains a Google Maps script placeholder, but the current veterinary page does not render a map or use geolocation. |
+| Pet food subscriptions | Produce rule-based food recommendations and demonstrate recurring orders. | Interactive local simulation; no payment, clinical diet validation, fulfillment, or delivery integration. |
+| Community and events | Browse a community feed and pet events. | Demo content; event registration is stored locally. |
+| Adoption and playdates | Explore adoptable pets and possible pet matches. | Static/demo listings with client-side interactions; not connected to shelters or a matching service. |
+| PetPal AI | Answer general pet-care questions with safety checks and source-grounded RAG. | Frontend widget and backend implementation exist and work together locally. The backend and chatbot API are unavailable on the current frontend-only EC2 deployment. |
+| REST API and PostgreSQL | Provide routes for authentication, pets, bookings, providers, events, subscriptions, reviews, notifications, recommendations, and analytics. | Express routes, Prisma schema, and an initial PostgreSQL migration exist; most React pages are not connected to them, and this layer is not deployed on the current EC2 host. |
 
 ## PetPal AI assistant
 
@@ -65,6 +66,36 @@ The chatbot uses deterministic lexical retrieval—not embeddings, semantic vect
 
 When no passage clears the relevance threshold, the backend returns no citations. The prompt directs the model to avoid claiming that the curated knowledge base supports an unsupported statement.
 
+The sequence below represents the implemented application flow when the frontend and backend are running together. On the current public EC2 deployment, only the frontend is available, so requests to the server-side chat API cannot complete there.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Widget as React chat widget
+    participant API as Express POST /api/chat
+    participant Safety as Safety screening
+    participant RAG as BM25 retriever
+    participant LLM as Ollama Cloud
+
+    User->>Widget: Ask a pet-care question
+    Widget->>API: Send bounded conversation history
+    API->>Safety: Validate and screen request
+    alt Possible emergency or medication dosage request
+        Safety-->>API: Deterministic safety response
+        API-->>Widget: Guidance with no citations
+    else Non-urgent question
+        API->>RAG: Retrieve passages for latest question
+        RAG-->>API: Relevant passages and source metadata
+        API->>LLM: Server prompt, history, and retrieved context
+        LLM-->>API: Generated answer
+        API->>API: Remove unsupported numeric specifics
+        API-->>Widget: Answer, urgency flag, and citations
+    end
+    Widget-->>User: Render text and safe source links
+```
+
+RAG retrieves relevant reviewed text before generation. It does **not** train, retrain, or fine-tune the Ollama model.
+
 ### Knowledge base
 
 Curated documents live in [`server/src/knowledge/pet-care/`](server/src/knowledge/pet-care/). They contain short original summaries and source metadata rather than copies of complete pages.
@@ -89,20 +120,48 @@ The AVMA metadata entry remains marked `manual-review`. Its source content could
 ## Architecture
 
 ```mermaid
-flowchart TD
-    UI[Browser / React UI] -->|POST /api/chat| API[Express chat API]
-    API --> VALIDATE[Request validation and limits]
-    VALIDATE --> SAFETY[Emergency and medication screening]
-    SAFETY -->|Urgent safety response| UI
-    SAFETY -->|Non-urgent question| RETRIEVE[Local JSON knowledge base\nBM25 lexical retrieval]
-    RETRIEVE --> PROMPT[Server-controlled prompt assembly]
-    PROMPT --> OLLAMA[Ollama Cloud API]
-    OLLAMA --> GROUND[Grounding check]
-    GROUND --> RESPONSE[Answer and source metadata]
-    RESPONSE --> UI
+flowchart LR
+    subgraph DEPLOYED["Current AWS EC2 deployment — ap-southeast-2"]
+        USER[User / browser]
+        NGINX["Nginx on Amazon Linux 2023<br/>EC2 t3.micro"]
+        STATIC["Vite production build<br/>React + TypeScript SPA"]
+        USER -->|HTTP request| NGINX
+        NGINX -->|Static files from /usr/share/nginx/html| STATIC
+    end
+
+    MAPS["Google Maps JavaScript API<br/>placeholder only; no current map UI"]
+    STATIC -. Placeholder script reference .-> MAPS
+
+    subgraph UNDEPLOYED["Application services — NOT deployed on the current EC2 instance"]
+        API[Express REST API]
+        SAFETY[Validation and pet-care safeguards]
+        RETRIEVAL[BM25 lexical retrieval]
+        KB[Curated veterinary JSON knowledge base]
+        PROMPT[Server-controlled prompt assembly]
+        OLLAMA[Ollama Cloud API]
+        GROUND[Grounding check and citations]
+        PRISMA[Prisma ORM]
+        POSTGRES[(PostgreSQL)]
+
+        API --> SAFETY
+        SAFETY --> RETRIEVAL
+        RETRIEVAL --> KB
+        RETRIEVAL --> PROMPT
+        PROMPT --> OLLAMA
+        OLLAMA --> GROUND
+        GROUND --> API
+        API --> PRISMA
+        PRISMA --> POSTGRES
+    end
+
+    STATIC -. Intended API requests unavailable on current host .-> API
 ```
 
-The broader backend also exposes routes for authentication, pets, bookings, trainers, veterinarians, events, subscriptions, recommendations, reviews, notifications, and administrator analytics. These routes use the Prisma/PostgreSQL layer, but most customer pages currently use the separate browser-local demo data layer.
+For the current deployment, a browser requests the public EC2 IPv4 address over HTTP. Nginx reads `index.html` and the generated assets from `/usr/share/nginx/html`, returns them to the browser, and the React application runs client-side. Nginx is serving static files only; it is not currently proxying requests to an Express service.
+
+In the intended full-stack flow, the browser will call a separately deployed Express API. Chat requests will pass through validation, rate limiting, safety screening, BM25 retrieval, and Ollama Cloud inference before returning an answer and citation metadata. Other API routes will reach PostgreSQL through Prisma. That backend, its database, and its private environment variables still require a production deployment before the public frontend can use them.
+
+The broader backend exposes routes for authentication, pets, bookings, trainers, veterinarians, events, subscriptions, recommendations, reviews, notifications, and administrator analytics. These routes use the Prisma/PostgreSQL layer, but most customer pages currently use the separate browser-local demo data layer.
 
 ## Technology stack
 
@@ -111,6 +170,8 @@ The broader backend also exposes routes for authentication, pets, bookings, trai
 - React 19
 - TypeScript 5.8
 - Vite 6
+- Tailwind CSS loaded from its browser CDN
+- Google Maps JavaScript API loader placeholder in `index.html`; no map UI is implemented yet
 - Browser `localStorage` for customer demo data
 - Browser `sessionStorage` for bounded chat history
 
@@ -145,11 +206,21 @@ The database layer supports backend routes; it is not yet the persistence layer 
 - Server-rendered React citation safety checks
 - TypeScript checking and Vite production builds
 
+### Current frontend hosting
+
+- AWS EC2 in Asia Pacific (Sydney), `ap-southeast-2`
+- Amazon Linux 2023 on a `t3.micro` instance
+- Nginx serving the Vite `dist` output over HTTP
+- Manual deployment through SSH and SCP
+
+There are no committed Docker, infrastructure-as-code, or CI/CD deployment definitions in this repository.
+
 ## Repository structure
 
 ```text
 PetPal/
-├── components/                 # Shared React UI and chatbot
+├── components/
+│   └── chat/                   # Chat widget and citation rendering
 ├── lib/                        # Browser demo data, chat client, citation validation
 ├── pages/                      # Customer pages and preserved analytics page
 ├── server/
@@ -163,9 +234,84 @@ PetPal/
 │   │   └── services/           # Ollama, RAG, safety, password, token services
 │   └── test/                   # Chat, retrieval, safety, and citation tests
 ├── .env.example
+├── App.tsx                     # SPA page selection and top-level UI
+├── index.tsx                   # React entry point
 ├── package.json
+├── README.md
 └── vite.config.ts
 ```
+
+The EC2 and Nginx deployment is currently an operator-run process documented below; it does not have a corresponding deployment directory in the repository.
+
+## AWS EC2 frontend deployment
+
+### Deployment status
+
+| Item | Current value |
+| --- | --- |
+| Public frontend | [http://3.107.54.95](http://3.107.54.95) |
+| AWS region | Asia Pacific (Sydney), `ap-southeast-2` |
+| Instance | EC2 `t3.micro` |
+| Operating system | Amazon Linux 2023 |
+| Web server | Nginx |
+| Web root | `/usr/share/nginx/html` |
+| Temporary upload path | `/tmp/petpal/dist` |
+| Deployed application scope | Vite static frontend only |
+
+The deployed files are the output of `npm run build`. The Express backend, PostgreSQL database, and server-side `/api/chat` integration are **not running on this instance**. As a result, browser-local demo features can work on the public site, but backend-dependent features—including live chatbot responses—cannot work until an API is deployed and the frontend is built with its public API URL.
+
+### Manual deployment workflow
+
+The following PowerShell example documents the completed manual workflow while keeping the PEM filename and host configurable. Never commit the PEM file or paste its contents into documentation.
+
+1. From the repository root, build the production frontend. Vite creates the `dist` directory.
+
+   ```powershell
+   npm run build
+   ```
+
+2. Create a temporary destination on the EC2 instance. SSH authenticates with the private PEM key; replace the host placeholder with the active EC2 public address.
+
+   ```powershell
+   ssh -i "$HOME\Downloads\PetPal-key.pem" ec2-user@YOUR_EC2_PUBLIC_IP "mkdir -p /tmp/petpal"
+   ```
+
+3. Transfer the generated `dist` directory with SCP. This copies build output rather than source code, dependencies, or environment files.
+
+   ```powershell
+   scp -i "$HOME\Downloads\PetPal-key.pem" -r .\dist ec2-user@YOUR_EC2_PUBLIC_IP:/tmp/petpal/
+   ```
+
+4. Copy the uploaded files into the Nginx web root, make files readable and directories traversable by the web-server process, validate the Nginx configuration, and reload it.
+
+   ```powershell
+   ssh -i "$HOME\Downloads\PetPal-key.pem" ec2-user@YOUR_EC2_PUBLIC_IP "sudo cp -r /tmp/petpal/dist/. /usr/share/nginx/html/ && sudo chmod -R a+rX /usr/share/nginx/html && sudo nginx -t && sudo systemctl reload nginx"
+   ```
+
+5. Open the public URL in a browser and verify that the HTML and hashed JavaScript assets load. If the page is blank or an asset returns an error, inspect the Nginx status and logs on the instance.
+
+   ```bash
+   sudo systemctl status nginx
+   sudo tail -n 100 /var/log/nginx/error.log
+   sudo ls -la /usr/share/nginx/html
+   ```
+
+Use a security-group rule that limits SSH access to a trusted source address, and keep the PEM key private with restrictive local permissions. The combined remote command above is a simple repeatable deployment example—not a CI/CD pipeline, rollback strategy, or zero-downtime release process.
+
+### Blank-page troubleshooting
+
+During the initial deployment, the HTML loaded but the site displayed a blank page. The Nginx error log reported `Permission denied` while Nginx attempted to serve the generated JavaScript bundle. The bundle had reached the server, but the Nginx worker could not read the file or traverse part of its directory path.
+
+Running `sudo chmod -R a+rX /usr/share/nginx/html` corrected the web-root permissions: files became readable and directories became traversable without making every file executable. After `sudo nginx -t` succeeded and Nginx was reloaded, the JavaScript asset could be served and the React application rendered normally. When a similar issue occurs, use the error log and the web-root listing to distinguish a permissions problem from a missing or incorrectly referenced asset.
+
+### Current deployment limitations
+
+- The site is served over HTTP rather than HTTPS.
+- The public IPv4 address can change if the instance is stopped and restarted unless a stable address is configured.
+- The EC2 host serves the frontend only; Express, PostgreSQL, Prisma-backed routes, and the Ollama-backed chatbot endpoint are not deployed there.
+- Any future Google Maps browser integration will require a valid API key with correctly scoped Google Cloud API and website restrictions. The current veterinary page does not render a map, and no key is documented here.
+- This manual static deployment is not a complete production deployment of PetPal.
+- The repository does not configure S3, CloudFront, RDS, load balancing, automatic scaling, Docker production hosting, HTTPS certificates, or CI/CD deployment pipelines.
 
 ## Local setup
 
@@ -245,6 +391,26 @@ OLLAMA_TIMEOUT_MS=30000
 The remaining `CHAT_*` variables in [`server/.env.example`](server/.env.example) are optional bounded-history, request-size, and rate-limit settings with validated defaults.
 
 Never put `OLLAMA_API_KEY`, database credentials, or JWT secrets in a `VITE_` variable. Vite variables are browser-visible.
+
+| Variable | File | Purpose | Safe example |
+| --- | --- | --- | --- |
+| `VITE_API_BASE_URL` | Root `.env` | Browser-visible base URL for the Express API. Set it before `npm run build`. | `http://localhost:4000/api` |
+| `NODE_ENV` | `server/.env` | Express runtime mode. | `development` |
+| `DATABASE_URL` | `server/.env` | Prisma PostgreSQL connection string. | `postgresql://postgres:your_password@localhost:5432/petpal?schema=public` |
+| `PORT` | `server/.env` | Express listening port. | `4000` |
+| `CLIENT_URL` | `server/.env` | Default allowed frontend origin. | `http://localhost:3000` |
+| `CORS_ORIGINS` | `server/.env` | Optional comma-separated browser origins. | `http://localhost:3000` |
+| `JWT_SECRET` | `server/.env` | Private signing secret for backend JWTs. | `replace_with_a_long_random_secret` |
+| `JWT_EXPIRES_IN` | `server/.env` | JWT validity period. | `7d` |
+| `OLLAMA_API_KEY` | `server/.env` | Private Ollama Cloud bearer credential. | `your_ollama_api_key` |
+| `OLLAMA_MODEL` | `server/.env` | Cloud model available to the Ollama account. | `your_supported_model_name` |
+| `OLLAMA_BASE_URL` | `server/.env` | Ollama Cloud API base URL. | `https://ollama.com/api` |
+| `OLLAMA_TIMEOUT_MS` | `server/.env` | Upstream inference timeout. | `30000` |
+| `CHAT_HISTORY_MAX_MESSAGES` | `server/.env` | Maximum accepted conversation messages. | `12` |
+| `CHAT_MESSAGE_MAX_CHARS` | `server/.env` | Per-message character limit. | `2000` |
+| `CHAT_REQUEST_MAX_CHARS` | `server/.env` | Total conversation character limit. | `12000` |
+| `CHAT_RATE_LIMIT_WINDOW_MS` | `server/.env` | In-memory rate-limit window. | `60000` |
+| `CHAT_RATE_LIMIT_MAX` | `server/.env` | Requests allowed per IP in each window. | `12` |
 
 ### 4. Prepare PostgreSQL and Prisma
 
@@ -342,8 +508,9 @@ The root package currently has no browser end-to-end test script.
 - Chat history lasts only for the browser tab session and is not synchronized across devices.
 - Emergency detection uses conservative keyword rules and can miss emergencies or produce false alarms.
 - The RAG corpus and automated evaluations are limited.
-- No hosted demo, committed screenshots, or demo GIF are currently included in the repository.
-- Deployment and CI/CD configuration are not currently included.
+- The hosted demo contains only the static frontend; the backend, database, and live chatbot service are not deployed with it.
+- No committed screenshots or demo GIF are currently included in the repository.
+- Deployment is manual; deployment automation and CI/CD configuration are not included.
 
 ## Analytics and roadmap
 
@@ -359,7 +526,8 @@ Planned or possible future work includes:
 - Broader reviewed veterinary knowledge coverage
 - Evaluated semantic embeddings or hybrid retrieval
 - More extensive grounding, safety, and browser end-to-end evaluations
-- Cloud deployment and CI/CD
+- Deployment of the Express API and PostgreSQL data layer
+- HTTPS, stable DNS/addressing, secrets management, monitoring, and CI/CD
 
 These roadmap items are not implemented features.
 
